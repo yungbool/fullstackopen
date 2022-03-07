@@ -1,1 +1,1 @@
-Submissions for 2020 fullstackopen course
+Submissions for 2022 fullstackopen course
