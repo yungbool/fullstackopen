@@ -11,7 +11,7 @@ morgan.token('body', (req, res) => {
 });
 
 const logger = morgan(':method :url :status :res[content-length] - :response-time ms :body');
-const PORT = 443;
+const PORT = (process.env.PORT || 3001);
 
 app.use(logger);
 
