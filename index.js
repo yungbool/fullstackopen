@@ -21,31 +21,6 @@ app.use(express.json());
 app.use(cors());
 app.use(logger);
 
-/*
-let persons = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-];
-*/
-
 const generateId = () => {
   const min = Math.ceil(1);
   const max = Math.floor(1e6);
@@ -90,8 +65,10 @@ app.post('/api/persons/', (req, res, next) => {
 
   if (!body.name) {
     res.status(400).send({ error: 'Name missing' });
+    return;
   } else if (!body.number) {
     res.status(400).send({ error: 'Number missing' });
+    return;
   } 
 
   Person
@@ -109,9 +86,10 @@ app.post('/api/persons/', (req, res, next) => {
 
         newPerson
           .save()
-          .then(savedPerson => res.json(savedPerson));
+          .then(savedPerson => res.json(savedPerson))
+          .catch(error => next(error));
       }
-    });
+    })
 })
 
 app.put('/api/persons/:id', (req, res, next) => {
@@ -124,9 +102,14 @@ app.put('/api/persons/:id', (req, res, next) => {
   })
 
   Person
-    .findByIdAndUpdate(id, person, { new: true })
-    .then(updatedPerson => res.json(updatedPerson))
-    .catch(error => next(error))
+    .findByIdAndUpdate(id, person, { new: true, runValidators: true })
+    .then(updatedPerson => {
+      if (updatedPerson)
+        res.json(updatedPerson)
+      else
+        next();
+    })
+    .catch(error => next(error));
 })
 
 app.delete('/api/persons/:id', (req, res, next) => {
@@ -138,7 +121,8 @@ app.delete('/api/persons/:id', (req, res, next) => {
       } else {
         res.status(204).end();
       }
-    }).catch(error => next(error))
+    })
+    .catch(error => next(error));
 })
 
 const unknownEndpoint = (_, res) => {
@@ -146,10 +130,11 @@ const unknownEndpoint = (_, res) => {
 }
 
 const errorHandler = (error, req, res, next) => {
-  console.error(error.message);
-
-  if (error.name === 'CastError') {
+  console.log(error);
+  if (error.name === 'CastError' && error.kind === 'ObjectId') {
     return res.status(400).send({ error: 'malformed id' });
+  } else if (error.name === 'ValidationError') {
+    return res.status(400).json({ error: error.message });
   }
 
   next(error);
